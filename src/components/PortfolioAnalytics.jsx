@@ -10,7 +10,7 @@ export default function PortfolioAnalytics({ stocks, latestCloseByStock }) {
     return null
   }
 
-  // Calculate metrics
+  // Calculate metrics (only active positions count toward invested/current totals)
   const metrics = stocks.reduce(
     (acc, s) => {
       const hasPrice = latestCloseByStock[s.id] != null
@@ -18,21 +18,21 @@ export default function PortfolioAnalytics({ stocks, latestCloseByStock }) {
       const currentValue = hasPrice ? s.quantity * latestCloseByStock[s.id] : costBasis
       const gainLoss = currentValue - costBasis
 
-      acc.totalInvested += costBasis
-      acc.totalCurrent += currentValue
-
-      if (hasPrice) {
-        if (gainLoss > 0) {
-          acc.gainers.push({ ...s, gainLoss, gainPct: (gainLoss / costBasis) * 100 })
-          acc.winCount += 1
-        } else if (gainLoss < 0) {
-          acc.losers.push({ ...s, gainLoss, gainPct: (gainLoss / costBasis) * 100 })
-        } else {
-          acc.breakeven += 1
-        }
-      }
-
       if (s.status === 'active') {
+        acc.totalInvested += costBasis
+        acc.totalCurrent += currentValue
+
+        if (hasPrice) {
+          if (gainLoss > 0) {
+            acc.gainers.push({ ...s, gainLoss, gainPct: (gainLoss / costBasis) * 100 })
+            acc.winCount += 1
+          } else if (gainLoss < 0) {
+            acc.losers.push({ ...s, gainLoss, gainPct: (gainLoss / costBasis) * 100 })
+          } else {
+            acc.breakeven += 1
+          }
+        }
+
         acc.activeCount += 1
       } else {
         acc.exitedCount += 1
