@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  GitHub Pages serves this file for any unmatched route (e.g. a
+  direct link to /stock/abc123). It redirects back to index.html
+  while preserving the path, so React Router can take over and
+  render the right page client-side.
+  This is the standard spa-github-pages redirect trick.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      var segmentCount = 1 // number of path segments to keep as the app's base (repo name)
+      var l = window.location
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + segmentCount).join('/') +
+        '/?p=/' + l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      )
+    </script>
+  </head>
+  <body></body>
+</html>

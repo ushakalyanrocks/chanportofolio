@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!--
+      Pairs with public/404.html: converts the ?p=/path redirect
+      back into a clean URL before React Router mounts.
+    -->
+    <script>
+      (function () {
+        var l = window.location
+        var params = new URLSearchParams(l.search)
+        var redirectPath = params.get('p')
+        if (redirectPath) {
+          var redirectQuery = params.get('q')
+          var newSearch = redirectQuery ? '?' + redirectQuery.replace(/~and~/g, '&') : ''
+          var newPath = l.pathname.replace(/\/$/, '') + redirectPath.replace(/~and~/g, '&')
+          window.history.replaceState(null, null, newPath + newSearch + l.hash)
+        }
+      })()
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

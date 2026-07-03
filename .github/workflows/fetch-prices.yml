@@ -1,0 +1,31 @@
+name: Fetch daily close prices
+
+on:
+  schedule:
+    # 11:00 UTC = 4:30 PM IST, after NSE market close (3:30 PM IST).
+    # Runs Mon–Fri only.
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run price fetch script (user login, no service_role key)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          APP_USER_EMAIL: ${{ secrets.APP_USER_EMAIL }}
+          APP_USER_PASSWORD: ${{ secrets.APP_USER_PASSWORD }}
+        run: node scripts/fetch-prices-auth.js
