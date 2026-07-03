@@ -8,5 +8,5 @@ import react from '@vitejs/plugin-react'
 // (repo named yourname.github.io), set base to '/'.
 export default defineConfig({
   plugins: [react()],
-  base: '/portfolio-tracker/',
+  base: '/chanportofolio/',
 })
