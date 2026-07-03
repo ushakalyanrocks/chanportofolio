@@ -70,7 +70,7 @@ async function main() {
     console.error('Login failed:', loginError.message)
     process.exit(1)
   }
-  console.log(`Logged in as ${APP_USER_EMAIL}`)
+  console.log(`Logged in succcessfully`)
 
   // 2. Read active stocks — RLS automatically scopes this to your rows.
   const { data: stocks, error } = await supabase
