@@ -164,17 +164,32 @@ export default function Dashboard() {
     }
   }
 
+  // Single source of truth for "current" totals: live calc from stocks +
+  // latest prices, active positions only. Header, chart's today-point, and
+  // PortfolioAnalytics all derive from this same number so they can't drift.
+  const liveMetrics = useMemo(
+    () =>
+      stocks.reduce(
+        (acc, s) => {
+          if (s.status !== 'active') return acc
+          const hasPrice = latestCloseByStock[s.id] != null
+          const costBasis = s.quantity * s.avg_price
+          const currentValue = hasPrice
+            ? s.quantity * latestCloseByStock[s.id]
+            : costBasis
+          acc.totalInvested += costBasis
+          acc.totalCurrent += currentValue
+          return acc
+        },
+        { totalInvested: 0, totalCurrent: 0 }
+      ),
+    [stocks, latestCloseByStock]
+  )
+
   const handleExportCSV = () => {
     const portfolioSummary = {
-      totalInvested: stocks.reduce((sum, s) => sum + s.quantity * s.avg_price, 0),
-      currentValue: stocks.reduce(
-        (sum, s) =>
-          sum +
-          (latestCloseByStock[s.id]
-            ? s.quantity * latestCloseByStock[s.id]
-            : s.quantity * s.avg_price),
-        0
-      ),
+      totalInvested: liveMetrics.totalInvested,
+      currentValue: liveMetrics.totalCurrent,
       activeCount: stocks.filter((s) => s.status === 'active').length,
       exitedCount: stocks.filter((s) => s.status === 'exited').length,
     }
@@ -255,10 +270,23 @@ export default function Dashboard() {
     [stocks, latestCloseByStock, todayCloseByStock, yesterdayCloseByStock]
   )
 
-  const chartData = useMemo(
-    () => filterByRange(portfolioHistory, range),
-    [portfolioHistory, range]
-  )
+  // Chart uses backend snapshots for past days, but today's point is
+  // overridden/appended with the live totals so it always matches the
+  // header and the analytics card.
+  const chartData = useMemo(() => {
+    const base = filterByRange(portfolioHistory, range)
+    const todayStr = new Date().toISOString().split('T')[0]
+    const livePoint = {
+      date: todayStr,
+      total_value: liveMetrics.totalCurrent,
+      total_invested: liveMetrics.totalInvested,
+    }
+
+    if (base.length && base[base.length - 1].date === todayStr) {
+      return [...base.slice(0, -1), livePoint]
+    }
+    return [...base, livePoint]
+  }, [portfolioHistory, range, liveMetrics])
 
   const latestTotal = chartData.length
     ? chartData[chartData.length - 1].total_value
