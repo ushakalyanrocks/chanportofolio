@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const formatINR = (v) =>
   new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(v)
+
+const formatQty = (v) =>
+  new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 2,
   }).format(v)
 
@@ -15,6 +20,8 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
   const [exitingId, setExitingId] = useState(null)
   const [exitPrice, setExitPrice] = useState('')
   const [saving, setSaving] = useState(false)
+  const [sortKey, setSortKey] = useState('symbol')
+  const [sortDirection, setSortDirection] = useState('asc')
 
   const handleEditClick = (e, row) => {
     e.stopPropagation()
@@ -63,7 +70,7 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
     setExitPrice('')
   }
 
-  const handleExitSave = async (e, stockId, row) => {
+  const handleExitSave = async (e, stockId) => {
     e.stopPropagation()
     if (!exitPrice || isNaN(exitPrice) || parseFloat(exitPrice) <= 0) {
       alert('Please enter a valid exit price')
@@ -86,6 +93,91 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
     setExitingId(null)
   }
 
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  const getSortIndicator = (key) => {
+    if (sortKey !== key) return '↕'
+    return sortDirection === 'asc' ? '↑' : '↓'
+  }
+
+  const enrichedRows = useMemo(
+    () =>
+      (rows || []).map((r) => {
+        const hasPrice = r.latestClose != null
+        const costBasis = r.quantity * r.avg_price
+        const currentValue = hasPrice ? r.quantity * r.latestClose : costBasis
+        const gainAbs = currentValue - costBasis
+        const gainPct = costBasis > 0 ? (gainAbs / costBasis) * 100 : 0
+        const todayPL = r.todayChange != null && hasPrice ? r.todayChange * r.quantity : null
+
+        return {
+          ...r,
+          hasPrice,
+          costBasis,
+          currentValue,
+          gainAbs,
+          gainPct,
+          todayPL,
+        }
+      }),
+    [rows]
+  )
+
+  const sortedRows = useMemo(() => {
+    const rowsToSort = [...enrichedRows]
+
+    rowsToSort.sort((a, b) => {
+      let comparison = 0
+
+      switch (sortKey) {
+        case 'symbol':
+          comparison = a.symbol.localeCompare(b.symbol)
+          break
+        case 'qty':
+          comparison = (a.quantity || 0) - (b.quantity || 0)
+          break
+        case 'amount':
+          comparison = (a.costBasis || 0) - (b.costBasis || 0)
+          break
+        case 'today':
+          comparison = (a.todayPL ?? -Infinity) - (b.todayPL ?? -Infinity)
+          break
+        case 'current':
+          comparison = (a.currentValue || 0) - (b.currentValue || 0)
+          break
+        default:
+          comparison = a.symbol.localeCompare(b.symbol)
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+
+    return rowsToSort
+  }, [enrichedRows, sortDirection, sortKey])
+
+  const totals = useMemo(
+    () =>
+      enrichedRows.reduce(
+        (acc, row) => {
+          acc.qty += Number(row.quantity) || 0
+          acc.costBasis += row.costBasis || 0
+          acc.currentValue += row.currentValue || 0
+          acc.todayPL += row.todayPL ?? 0
+          acc.overallPL += row.gainAbs || 0
+          return acc
+        },
+        { qty: 0, costBasis: 0, currentValue: 0, todayPL: 0, overallPL: 0 }
+      ),
+    [enrichedRows]
+  )
+
   if (!rows || rows.length === 0) {
     return <p className="chart-empty">No stocks added yet.</p>
   }
@@ -94,28 +186,46 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
     <table className="stock-table">
       <thead>
         <tr>
-          <th>Symbol</th>
+          <th>
+            <button type="button" className="sort-button" onClick={() => handleSort('symbol')}>
+              Symbol <span className="sort-indicator">{getSortIndicator('symbol')}</span>
+            </button>
+          </th>
           <th>Status</th>
-          <th>Qty</th>
+          <th>
+            <button type="button" className="sort-button" onClick={() => handleSort('qty')}>
+              Qty <span className="sort-indicator">{getSortIndicator('qty')}</span>
+            </button>
+          </th>
           <th>Avg Price</th>
-          <th>Cost Basis</th>
+          <th>
+            <button type="button" className="sort-button" onClick={() => handleSort('amount')}>
+              Amount <span className="sort-indicator">{getSortIndicator('amount')}</span>
+            </button>
+          </th>
           <th>Latest Close</th>
-          <th>Today's P&L</th>
-          <th>Overall P&L</th>
+          <th>
+            <button type="button" className="sort-button" onClick={() => handleSort('today')}>
+              Today&apos;s <span className="sort-indicator">{getSortIndicator('today')}</span>
+            </button>
+          </th>
+          <th>
+            <button type="button" className="sort-button" onClick={() => handleSort('current')}>
+              Current Value <span className="sort-indicator">{getSortIndicator('current')}</span>
+            </button>
+          </th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((r) => {
-          const hasPrice = r.latestClose != null
-          const costBasis = r.quantity * r.avg_price
-          const currentValue = hasPrice ? r.quantity * r.latestClose : costBasis
-          const gainAbs = currentValue - costBasis
-          const gainPct = costBasis > 0 ? (gainAbs / costBasis) * 100 : 0
+        {sortedRows.map((r) => {
+          const hasPrice = r.hasPrice
+          const costBasis = r.costBasis
+          const currentValue = r.currentValue
+          const gainAbs = r.gainAbs
+          const gainPct = r.gainPct
+          const todayPL = r.todayPL
           const isGain = gainAbs >= 0
-          const todayPL = r.todayChange != null && hasPrice 
-            ? r.todayChange * r.quantity 
-            : null
           const isTodayGain = todayPL != null && todayPL >= 0
 
           const isEditing = editingId === r.id
@@ -141,15 +251,13 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                   <input
                     type="number"
                     value={qty}
-                    onChange={(e) =>
-                      setEditValues({ ...editValues, quantity: e.target.value })
-                    }
+                    onChange={(e) => setEditValues({ ...editValues, quantity: e.target.value })}
                     onClick={(e) => e.stopPropagation()}
                     autoFocus
                     step="0.01"
                   />
                 ) : (
-                  qty
+                  formatQty(qty)
                 )}
               </td>
               <td
@@ -160,9 +268,7 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                   <input
                     type="number"
                     value={avgPrice}
-                    onChange={(e) =>
-                      setEditValues({ ...editValues, avg_price: e.target.value })
-                    }
+                    onChange={(e) => setEditValues({ ...editValues, avg_price: e.target.value })}
                     onClick={(e) => e.stopPropagation()}
                     step="0.01"
                   />
@@ -176,7 +282,7 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
               <td onClick={(e) => !isEditing && !isExiting && e.stopPropagation()}>
                 {hasPrice ? formatINR(r.latestClose) : '—'}
               </td>
-              <td 
+              <td
                 className={todayPL != null ? (isTodayGain ? 'gain-text' : 'loss-text') : ''}
                 onClick={(e) => !isEditing && !isExiting && e.stopPropagation()}
               >
@@ -187,24 +293,16 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                 onClick={(e) => !isEditing && !isExiting && e.stopPropagation()}
               >
                 {hasPrice
-                  ? `${isGain ? '+' : ''}${formatINR(gainAbs)} (${gainPct.toFixed(1)}%)`
+                  ? `${formatINR(currentValue)} · ${isGain ? '+' : ''}${formatINR(gainAbs)} (${gainPct.toFixed(1)}%)`
                   : '—'}
               </td>
               <td onClick={(e) => e.stopPropagation()} className="actions-cell">
                 {isEditing ? (
                   <>
-                    <button
-                      className="btn-save"
-                      onClick={(e) => handleSave(e, r.id)}
-                      disabled={saving}
-                    >
+                    <button className="btn-save" onClick={(e) => handleSave(e, r.id)} disabled={saving}>
                       Save
                     </button>
-                    <button
-                      className="btn-cancel"
-                      onClick={handleCancel}
-                      disabled={saving}
-                    >
+                    <button className="btn-cancel" onClick={handleCancel} disabled={saving}>
                       Cancel
                     </button>
                   </>
@@ -220,48 +318,26 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                       className="exit-price-input"
                       autoFocus
                     />
-                    <button
-                      className="btn-save"
-                      onClick={(e) => handleExitSave(e, r.id, r)}
-                      disabled={saving}
-                      title="Confirm exit"
-                    >
+                    <button className="btn-save" onClick={(e) => handleExitSave(e, r.id)} disabled={saving} title="Confirm exit">
                       ✓
                     </button>
-                    <button
-                      className="btn-cancel"
-                      onClick={handleExitCancel}
-                      disabled={saving}
-                      title="Cancel exit"
-                    >
+                    <button className="btn-cancel" onClick={handleExitCancel} disabled={saving} title="Cancel exit">
                       ✕
                     </button>
                   </>
                 ) : (
                   <>
                     {r.status === 'active' && (
-                      <button
-                        className="btn-edit"
-                        onClick={(e) => handleEditClick(e, r)}
-                        title="Edit quantity and average price"
-                      >
+                      <button className="btn-edit" onClick={(e) => handleEditClick(e, r)} title="Edit quantity and average price">
                         ✎
                       </button>
                     )}
                     {r.status === 'active' && (
-                      <button
-                        className="btn-exit"
-                        onClick={(e) => handleExitClick(e, r)}
-                        title="Mark as exited"
-                      >
+                      <button className="btn-exit" onClick={(e) => handleExitClick(e, r)} title="Mark as exited">
                         ⊗
                       </button>
                     )}
-                    <button
-                      className="btn-delete"
-                      onClick={(e) => handleDelete(e, r.id)}
-                      title="Delete this stock"
-                    >
+                    <button className="btn-delete" onClick={(e) => handleDelete(e, r.id)} title="Delete this stock">
                       🗑
                     </button>
                   </>
@@ -271,6 +347,26 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
           )
         })}
       </tbody>
+      <tfoot>
+        <tr className="table-footer">
+          <td><strong>Total</strong></td>
+          <td></td>
+          <td>{formatQty(totals.qty)}</td>
+          <td></td>
+          <td>{formatINR(totals.costBasis)}</td>
+          <td></td>
+          <td className={totals.todayPL >= 0 ? 'gain-text' : 'loss-text'}>
+            {`${totals.todayPL >= 0 ? '+' : ''}${formatINR(totals.todayPL)}`}
+          </td>
+          <td className={totals.overallPL >= 0 ? 'gain-text' : 'loss-text'}>
+            {formatINR(totals.currentValue)}
+            <span className="footer-subtext">
+              {`${totals.overallPL >= 0 ? '+' : ''}${formatINR(totals.overallPL)}`}
+            </span>
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
   )
 }

@@ -287,10 +287,47 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.sort-button {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sort-button:hover {
+  color: var(--brass);
+}
+
+.sort-indicator {
+  color: var(--brass);
+  font-size: 12px;
+}
+
 .stock-table td {
   padding: 14px 12px;
   border-bottom: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
+}
+
+.stock-table tfoot td {
+  border-top: 1px solid var(--line);
+  background: rgba(18, 27, 46, 0.75);
+  font-weight: 600;
+}
+
+.footer-subtext {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 .stock-table tr:last-child td {
