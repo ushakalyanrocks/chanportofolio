@@ -18,6 +18,61 @@ const formatINR = (v) =>
     maximumFractionDigits: 0,
   }).format(v)
 
+// Detects a large one-off jump (e.g. a deposit) and computes the y-domain
+// from only the values AFTER that jump, so small daily moves aren't
+// flattened by a huge one-time step change.
+function computeSmartDomain(values) {
+  if (values.length < 3) {
+    const only = values[0] ?? 0
+    return [Math.max(0, only * 0.95), only * 1.05 || 1]
+  }
+
+  // find the single biggest day-to-day jump
+  let jumpIndex = 0
+  let maxJump = 0
+  for (let i = 1; i < values.length; i++) {
+    const jump = Math.abs(values[i] - values[i - 1])
+    if (jump > maxJump) {
+      maxJump = jump
+      jumpIndex = i
+    }
+  }
+
+  const postJump = values.slice(jumpIndex)
+  const avgDailyMove =
+    postJump.length > 1
+      ? postJump
+          .slice(1)
+          .reduce((sum, v, i) => sum + Math.abs(v - postJump[i]), 0) /
+        (postJump.length - 1)
+      : 0
+
+  // if that jump is way bigger than typical daily movement, treat it as a
+  // deposit/withdrawal event and zoom the axis to the steady-state range only
+  const isDepositLikeJump = maxJump > avgDailyMove * 5 && postJump.length > 1
+
+  const focusValues = isDepositLikeJump ? postJump : values
+  const min = Math.min(...focusValues)
+  const max = Math.max(...focusValues)
+  const range = max - min
+
+  // buffer scales with the value itself (roughly 3-5%) so daily ₹5-6k moves
+  // on a ₹30L+ portfolio are still clearly visible, not just proportional
+  // to the tiny range between min/max
+  const padding = Math.max(range * 0.4, max * 0.03)
+
+  const rawMin = Math.max(0, min - padding)
+  const rawMax = max + padding
+
+  // round outward to the nearest lakh so axis labels are clean
+  // (e.g. 30,00,000 / 32,00,000 instead of 30,41,822 / 31,98,004)
+  const LAKH = 100000
+  const niceMin = Math.floor(rawMin / LAKH) * LAKH
+  const niceMax = Math.ceil(rawMax / LAKH) * LAKH
+
+  return [niceMin, niceMax === niceMin ? niceMax + LAKH : niceMax]
+}
+
 export default function PortfolioChart({ data }) {
   if (!data || data.length === 0) {
     return (
@@ -31,10 +86,7 @@ export default function PortfolioChart({ data }) {
   }
 
   const values = data.map((d) => d.total_value)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const padding = (max - min) * 0.1 || max * 0.05 || 1 // fallback if flat line or single point
-  const yDomain = [Math.max(0, min - padding), max + padding]
+  const yDomain = computeSmartDomain(values)
 
   return (
     <div className="chart-card">
