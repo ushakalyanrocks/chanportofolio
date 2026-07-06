@@ -30,6 +30,12 @@ export default function PortfolioChart({ data }) {
     )
   }
 
+  const values = data.map((d) => d.total_value)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const padding = (max - min) * 0.1 || max * 0.05 || 1 // fallback if flat line or single point
+  const yDomain = [Math.max(0, min - padding), max + padding]
+
   return (
     <div className="chart-card">
       <ResponsiveContainer width="100%" height={280}>
@@ -52,6 +58,7 @@ export default function PortfolioChart({ data }) {
             minTickGap={30}
           />
           <YAxis
+            domain={yDomain}
             stroke="#8892a6"
             fontSize={11}
             fontFamily="IBM Plex Mono"
