@@ -136,9 +136,18 @@ export default function PortfolioChart({ data }) {
             stroke="#d8a657"
             strokeWidth={2}
             fill="url(#portfolioFill)"
+            dot={{ r: 3, fill: '#d8a657', strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
           />
         </AreaChart>
       </ResponsiveContainer>
+      {data.length <= 3 && (
+        <div className="chart-sparse-notice">
+          Only {data.length} data point{data.length === 1 ? '' : 's'} in this
+          range yet — the line is just connecting them directly, not showing
+          a trend.
+        </div>
+      )}
     </div>
   )
 }
