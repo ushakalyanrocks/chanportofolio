@@ -86,12 +86,6 @@ export default function PortfolioChart({ data }) {
     )
   }
 
-  const values = data.map((d) => d.total_value)
-  const investedValues = data
-    .map((d) => d.total_invested)
-    .filter((v) => v != null)
-  const yDomain = computeSmartDomain([...values, ...investedValues])
-
   return (
     <div className="chart-card">
       <div className="chart-legend">
@@ -159,17 +153,6 @@ export default function PortfolioChart({ data }) {
             stroke="#d8a657"
             strokeWidth={2}
             fill="url(#portfolioFill)"
-            dot={{ r: 3, fill: '#d8a657', strokeWidth: 0 }}
-            activeDot={{ r: 5 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="total_invested"
-            stroke="#8892a6"
-            strokeWidth={2}
-            strokeDasharray="4 3"
-            dot={false}
-            activeDot={{ r: 4 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
