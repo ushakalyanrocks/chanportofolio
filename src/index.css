@@ -788,6 +788,61 @@ button {
   background-color: rgba(168, 159, 94, 0.1);
 }
 
+.btn-addlot {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  margin: 0 2px;
+  transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-addlot:hover {
+  border-color: var(--gain);
+  color: var(--gain);
+  background-color: rgba(79, 209, 165, 0.1);
+}
+
+.btn-addlot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add-lot-input {
+  background: var(--ink);
+  border: 1px solid var(--gain);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  width: 90px;
+}
+
+.add-lot-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(79, 209, 165, 0.15);
+}
+
+.add-lot-preview {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--gain);
+  white-space: nowrap;
+}
+
+.add-lot-preview.muted {
+  color: var(--text-muted);
+}
+
 .status-pill.active {
   border-color: var(--gain);
   color: var(--gain);

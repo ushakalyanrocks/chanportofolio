@@ -19,6 +19,8 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
   const [editValues, setEditValues] = useState({})
   const [exitingId, setExitingId] = useState(null)
   const [exitPrice, setExitPrice] = useState('')
+  const [addLotId, setAddLotId] = useState(null)
+  const [addLotValues, setAddLotValues] = useState({ quantity: '', avg_price: '' })
   const [saving, setSaving] = useState(false)
   const [sortKey, setSortKey] = useState('symbol')
   const [sortDirection, setSortDirection] = useState('asc')
@@ -49,6 +51,47 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
   const handleCancel = (e) => {
     e.stopPropagation()
     setEditingId(null)
+  }
+
+  const handleAddLotClick = (e, row) => {
+    e.stopPropagation()
+    setAddLotId(row.id)
+    setAddLotValues({ quantity: '', avg_price: '' })
+  }
+
+  const handleAddLotCancel = (e) => {
+    e.stopPropagation()
+    setAddLotId(null)
+    setAddLotValues({ quantity: '', avg_price: '' })
+  }
+
+  const handleAddLotSave = async (e, row) => {
+    e.stopPropagation()
+    const addQty = parseFloat(addLotValues.quantity)
+    const addPrice = parseFloat(addLotValues.avg_price)
+
+    if (!addQty || addQty <= 0 || !addPrice || addPrice <= 0) {
+      alert('Enter a valid quantity and average price for the new units')
+      return
+    }
+
+    const combinedQty = Number(row.quantity) + addQty
+    const combinedAvgPrice =
+      (Number(row.quantity) * Number(row.avg_price) + addQty * addPrice) /
+      combinedQty
+
+    setSaving(true)
+    try {
+      await onUpdate(row.id, {
+        quantity: combinedQty,
+        avg_price: combinedAvgPrice,
+      })
+      setAddLotId(null)
+      setAddLotValues({ quantity: '', avg_price: '' })
+    } catch (err) {
+      console.error('Failed to add lot:', err)
+    }
+    setSaving(false)
   }
 
   const handleDelete = async (e, stockId) => {
@@ -230,11 +273,23 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
 
           const isEditing = editingId === r.id
           const isExiting = exitingId === r.id
+          const isAddingLot = addLotId === r.id
+          const isRowBusy = isEditing || isExiting || isAddingLot
           const qty = isEditing ? editValues.quantity : r.quantity
           const avgPrice = isEditing ? editValues.avg_price : r.avg_price
 
+          const addQtyNum = parseFloat(addLotValues.quantity)
+          const addPriceNum = parseFloat(addLotValues.avg_price)
+          const hasValidLot =
+            isAddingLot && addQtyNum > 0 && addPriceNum > 0
+          const previewQty = hasValidLot ? Number(r.quantity) + addQtyNum : null
+          const previewAvg = hasValidLot
+            ? (Number(r.quantity) * Number(r.avg_price) + addQtyNum * addPriceNum) /
+              previewQty
+            : null
+
           return (
-            <tr key={r.id} className={isEditing || isExiting ? '' : 'clickable'} onClick={() => !isEditing && !isExiting && navigate(`/stock/${r.id}`)}>
+            <tr key={r.id} className={isRowBusy ? '' : 'clickable'} onClick={() => !isRowBusy && navigate(`/stock/${r.id}`)}>
               <td>
                 <span className="symbol-cell">{r.symbol}</span>
               </td>
@@ -244,7 +299,7 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                 </span>
               </td>
               <td
-                onClick={(e) => !isEditing && !isExiting && handleEditClick(e, r)}
+                onClick={(e) => !isRowBusy && handleEditClick(e, r)}
                 className={isEditing ? '' : 'editable-cell'}
               >
                 {isEditing ? (
@@ -256,12 +311,25 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                     autoFocus
                     step="0.01"
                   />
+                ) : isAddingLot ? (
+                  <input
+                    type="number"
+                    value={addLotValues.quantity}
+                    onChange={(e) =>
+                      setAddLotValues({ ...addLotValues, quantity: e.target.value })
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Add qty"
+                    autoFocus
+                    step="0.01"
+                    className="add-lot-input"
+                  />
                 ) : (
                   formatQty(qty)
                 )}
               </td>
               <td
-                onClick={(e) => !isEditing && !isExiting && handleEditClick(e, r)}
+                onClick={(e) => !isRowBusy && handleEditClick(e, r)}
                 className={isEditing ? '' : 'editable-cell'}
               >
                 {isEditing ? (
@@ -272,25 +340,47 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                     onClick={(e) => e.stopPropagation()}
                     step="0.01"
                   />
+                ) : isAddingLot ? (
+                  <input
+                    type="number"
+                    value={addLotValues.avg_price}
+                    onChange={(e) =>
+                      setAddLotValues({ ...addLotValues, avg_price: e.target.value })
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Add avg price"
+                    step="0.01"
+                    className="add-lot-input"
+                  />
                 ) : (
                   formatINR(avgPrice)
                 )}
               </td>
-              <td onClick={(e) => !isEditing && !isExiting && e.stopPropagation()}>
-                {formatINR(costBasis)}
+              <td onClick={(e) => !isRowBusy && e.stopPropagation()}>
+                {isAddingLot ? (
+                  hasValidLot ? (
+                    <span className="add-lot-preview">
+                      → {formatQty(previewQty)} @ {formatINR(previewAvg)}
+                    </span>
+                  ) : (
+                    <span className="add-lot-preview muted">enter qty &amp; price</span>
+                  )
+                ) : (
+                  formatINR(costBasis)
+                )}
               </td>
-              <td onClick={(e) => !isEditing && !isExiting && e.stopPropagation()}>
+              <td onClick={(e) => !isRowBusy && e.stopPropagation()}>
                 {hasPrice ? formatINR(r.latestClose) : '—'}
               </td>
               <td
                 className={todayPL != null ? (isTodayGain ? 'gain-text' : 'loss-text') : ''}
-                onClick={(e) => !isEditing && !isExiting && e.stopPropagation()}
+                onClick={(e) => !isRowBusy && e.stopPropagation()}
               >
                 {todayPL != null ? `${isTodayGain ? '+' : ''}${formatINR(todayPL)}` : '—'}
               </td>
               <td
                 className={hasPrice ? (isGain ? 'gain-text' : 'loss-text') : ''}
-                onClick={(e) => !isEditing && !isExiting && e.stopPropagation()}
+                onClick={(e) => !isRowBusy && e.stopPropagation()}
               >
                 {hasPrice
                   ? `${formatINR(currentValue)} · ${isGain ? '+' : ''}${formatINR(gainAbs)} (${gainPct.toFixed(1)}%)`
@@ -303,6 +393,20 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                       Save
                     </button>
                     <button className="btn-cancel" onClick={handleCancel} disabled={saving}>
+                      Cancel
+                    </button>
+                  </>
+                ) : isAddingLot ? (
+                  <>
+                    <button
+                      className="btn-save"
+                      onClick={(e) => handleAddLotSave(e, r)}
+                      disabled={saving || !hasValidLot}
+                      title="Add these units to the position"
+                    >
+                      Save
+                    </button>
+                    <button className="btn-cancel" onClick={handleAddLotCancel} disabled={saving}>
                       Cancel
                     </button>
                   </>
@@ -328,8 +432,13 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
                 ) : (
                   <>
                     {r.status === 'active' && (
-                      <button className="btn-edit" onClick={(e) => handleEditClick(e, r)} title="Edit quantity and average price">
+                      <button className="btn-edit" onClick={(e) => handleEditClick(e, r)} title="Edit quantity and average price directly">
                         ✎
+                      </button>
+                    )}
+                    {r.status === 'active' && (
+                      <button className="btn-addlot" onClick={(e) => handleAddLotClick(e, r)} title="Add more units (auto-calculates combined avg price)">
+                        ➕
                       </button>
                     )}
                     {r.status === 'active' && (
