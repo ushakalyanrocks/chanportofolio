@@ -1,8 +1,7 @@
 import {
   ResponsiveContainer,
-  ComposedChart,
+  AreaChart,
   Area,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -86,26 +85,13 @@ export default function PortfolioChart({ data }) {
     )
   }
 
+  const values = data.map((d) => d.total_value)
+  const yDomain = computeSmartDomain(values)
+
   return (
     <div className="chart-card">
-      <div className="chart-legend">
-        <span className="chart-legend-item">
-          <span
-            className="chart-legend-swatch"
-            style={{ background: '#d8a657' }}
-          />
-          Current value
-        </span>
-        <span className="chart-legend-item">
-          <span
-            className="chart-legend-swatch"
-            style={{ background: '#8892a6' }}
-          />
-          Invested value
-        </span>
-      </div>
       <ResponsiveContainer width="100%" height={280}>
-        <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#d8a657" stopOpacity={0.35} />
@@ -142,10 +128,7 @@ export default function PortfolioChart({ data }) {
               fontSize: 12,
             }}
             labelFormatter={formatDate}
-            formatter={(v, name) => [
-              formatINR(v),
-              name === 'total_invested' ? 'Invested value' : 'Current value',
-            ]}
+            formatter={(v) => [formatINR(v), 'Portfolio value']}
           />
           <Area
             type="monotone"
@@ -153,8 +136,10 @@ export default function PortfolioChart({ data }) {
             stroke="#d8a657"
             strokeWidth={2}
             fill="url(#portfolioFill)"
+            dot={{ r: 3, fill: '#d8a657', strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
           />
-        </ComposedChart>
+        </AreaChart>
       </ResponsiveContainer>
       {data.length <= 3 && (
         <div className="chart-sparse-notice">
