@@ -125,14 +125,40 @@ export default function Dashboard() {
   const handleAddStock = async (stockData) => {
     setAddingStock(true)
     try {
-      const { data, error } = await supabase
-        .from('stocks')
-        .insert([stockData])
-        .select()
+      // If this symbol already has an active position, merge into it
+      // instead of creating a duplicate row: combine quantities and
+      // recompute the weighted-average price.
+      const existing = stocks.find(
+        (s) => s.status === 'active' && s.symbol === stockData.symbol
+      )
 
-      if (error) throw error
+      if (existing) {
+        const combinedQty = Number(existing.quantity) + Number(stockData.quantity)
+        const combinedAvgPrice =
+          (Number(existing.quantity) * Number(existing.avg_price) +
+            Number(stockData.quantity) * Number(stockData.avg_price)) /
+          combinedQty
 
-      setStocks([...stocks, data[0]])
+        const { data, error } = await supabase
+          .from('stocks')
+          .update({ quantity: combinedQty, avg_price: combinedAvgPrice })
+          .eq('id', existing.id)
+          .select()
+
+        if (error) throw error
+
+        setStocks(stocks.map((s) => (s.id === existing.id ? data[0] : s)))
+      } else {
+        const { data, error } = await supabase
+          .from('stocks')
+          .insert([stockData])
+          .select()
+
+        if (error) throw error
+
+        setStocks([...stocks, data[0]])
+      }
+
       setShowAddDialog(false)
     } catch (err) {
       console.error('Failed to add stock:', err)
@@ -185,6 +211,32 @@ export default function Dashboard() {
       ),
     [stocks, latestCloseByStock]
   )
+
+  // Today's P/L: sum of (today's close - yesterday's close) * quantity across
+  // active positions that have both prices. Also track how much of the
+  // portfolio that covers (positions missing yesterday's price, e.g. brand
+  // new adds, are excluded from both sides so the % stays accurate).
+  const todayMetrics = useMemo(
+    () =>
+      stocks.reduce(
+        (acc, s) => {
+          if (s.status !== 'active') return acc
+          const today = todayCloseByStock[s.id]
+          const yesterday = yesterdayCloseByStock[s.id]
+          if (today == null || yesterday == null) return acc
+          acc.todayPL += (today - yesterday) * s.quantity
+          acc.yesterdayValue += yesterday * s.quantity
+          return acc
+        },
+        { todayPL: 0, yesterdayValue: 0 }
+      ),
+    [stocks, todayCloseByStock, yesterdayCloseByStock]
+  )
+
+  const todayPLPct =
+    todayMetrics.yesterdayValue > 0
+      ? (todayMetrics.todayPL / todayMetrics.yesterdayValue) * 100
+      : null
 
   const handleExportCSV = () => {
     const portfolioSummary = {
@@ -338,6 +390,51 @@ export default function Dashboard() {
             {formatINR(totalGain)} ({totalGainPct.toFixed(1)}%) since investment
           </p>
         )}
+
+        <div className="summary-grid">
+          <div className="summary-box">
+            <p className="eyebrow">Invested value</p>
+            <p className="box-value">
+              {investedTotal != null ? formatINR(investedTotal) : '—'}
+            </p>
+          </div>
+
+          <div
+            className={`summary-box ${
+              todayMetrics.yesterdayValue > 0
+                ? todayMetrics.todayPL >= 0
+                  ? 'gain'
+                  : 'loss'
+                : ''
+            }`}
+          >
+            <p className="eyebrow">Today&apos;s P&amp;L</p>
+            {todayMetrics.yesterdayValue > 0 ? (
+              <>
+                <p
+                  className={`box-value ${
+                    todayMetrics.todayPL >= 0 ? 'gain-text' : 'loss-text'
+                  }`}
+                >
+                  {todayMetrics.todayPL >= 0 ? '+' : ''}
+                  {formatINR(todayMetrics.todayPL)}
+                </p>
+                {todayPLPct != null && (
+                  <p
+                    className={`box-subtext ${
+                      todayMetrics.todayPL >= 0 ? 'gain-text' : 'loss-text'
+                    }`}
+                  >
+                    {todayMetrics.todayPL >= 0 ? '+' : ''}
+                    {todayPLPct.toFixed(2)}%
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="box-value">—</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <RangeToggle value={range} onChange={setRange} />
@@ -379,6 +476,7 @@ export default function Dashboard() {
         onClose={() => setShowAddDialog(false)}
         onAdd={handleAddStock}
         loading={addingStock}
+        existingStocks={stocks}
       />
     </div>
   )

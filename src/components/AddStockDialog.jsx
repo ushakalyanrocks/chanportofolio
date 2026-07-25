@@ -1,6 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
-export default function AddStockDialog({ isOpen, onClose, onAdd, loading }) {
+const formatINR = (v) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(v)
+
+export default function AddStockDialog({ isOpen, onClose, onAdd, loading, existingStocks = [] }) {
   const [formData, setFormData] = useState({
     symbol: '',
     quantity: '',
@@ -13,6 +20,29 @@ export default function AddStockDialog({ isOpen, onClose, onAdd, loading }) {
     setFormData((prev) => ({ ...prev, [name]: value }))
     setError(null)
   }
+
+  // If this symbol already has an active position, show what the merged
+  // result will look like: combined quantity + weighted-average price.
+  const mergePreview = useMemo(() => {
+    const symbol = formData.symbol.toUpperCase().trim()
+    const qty = parseFloat(formData.quantity)
+    const price = parseFloat(formData.avg_price)
+    if (!symbol || isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0) {
+      return null
+    }
+
+    const existing = existingStocks.find(
+      (s) => s.status === 'active' && s.symbol === symbol
+    )
+    if (!existing) return null
+
+    const combinedQty = Number(existing.quantity) + qty
+    const combinedAvgPrice =
+      (Number(existing.quantity) * Number(existing.avg_price) + qty * price) /
+      combinedQty
+
+    return { existing, combinedQty, combinedAvgPrice }
+  }, [formData, existingStocks])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -98,6 +128,16 @@ export default function AddStockDialog({ isOpen, onClose, onAdd, loading }) {
             />
           </div>
 
+          {mergePreview && (
+            <div className="merge-preview">
+              You already hold {mergePreview.existing.quantity} @{' '}
+              {formatINR(mergePreview.existing.avg_price)}. This will update it
+              to <strong>{mergePreview.combinedQty}</strong> units at avg{' '}
+              <strong>{formatINR(mergePreview.combinedAvgPrice)}</strong> —
+              no duplicate row will be created.
+            </div>
+          )}
+
           {error && <div className="error-message">{error}</div>}
 
           <div className="dialog-actions">
@@ -114,7 +154,11 @@ export default function AddStockDialog({ isOpen, onClose, onAdd, loading }) {
               className="btn-save"
               disabled={loading}
             >
-              {loading ? 'Adding...' : 'Add Stock'}
+              {loading
+                ? 'Saving...'
+                : mergePreview
+                ? 'Update Position'
+                : 'Add Stock'}
             </button>
           </div>
         </form>

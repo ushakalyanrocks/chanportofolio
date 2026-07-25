@@ -190,6 +190,17 @@ button {
   margin: 0 0 16px;
 }
 
+.merge-preview {
+  background: rgba(216, 166, 87, 0.08);
+  border: 1px solid var(--brass);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 4px 0 16px;
+}
+
 /* ---------- Portfolio summary ---------- */
 .summary-block {
   margin-bottom: 32px;
@@ -221,6 +232,72 @@ button {
 
 .total-change.gain { color: var(--gain); }
 .total-change.loss { color: var(--loss); }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.summary-box {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  aspect-ratio: 1.4 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.summary-box.gain { border-color: var(--gain); }
+.summary-box.loss { border-color: var(--loss); }
+
+.box-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.box-value.gain-text { color: var(--gain); }
+.box-value.loss-text { color: var(--loss); }
+
+.box-subtext {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin: 6px 0 0;
+  color: var(--text-muted);
+}
+
+.box-subtext.gain-text { color: var(--gain); }
+.box-subtext.loss-text { color: var(--loss); }
+
+/* ---------- Chart legend ---------- */
+.chart-legend {
+  display: flex;
+  gap: 20px;
+  padding: 0 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
 
 /* ---------- Range toggle ---------- */
 .range-toggle {
