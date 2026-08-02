@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import RangeToggle from '../components/RangeToggle'
 import PortfolioChart from '../components/PortfolioChart'
+import PortfolioCharts from '../components/PortfolioCharts'
 import StockTable from '../components/StockTable'
 import AddStockDialog from '../components/AddStockDialog'
 import PortfolioAnalytics from '../components/PortfolioAnalytics'
@@ -439,6 +440,7 @@ export default function Dashboard() {
 
       <RangeToggle value={range} onChange={setRange} />
       <PortfolioChart data={chartData} />
+      <PortfolioCharts data={chartData} />
 
       <PortfolioAnalytics stocks={stocks} latestCloseByStock={latestCloseByStock} />
 

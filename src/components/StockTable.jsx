@@ -226,42 +226,43 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
   }
 
   return (
-    <table className="stock-table">
-      <thead>
-        <tr>
-          <th>
-            <button type="button" className="sort-button" onClick={() => handleSort('symbol')}>
-              Symbol <span className="sort-indicator">{getSortIndicator('symbol')}</span>
-            </button>
-          </th>
-          <th>Status</th>
-          <th>
-            <button type="button" className="sort-button" onClick={() => handleSort('qty')}>
-              Qty <span className="sort-indicator">{getSortIndicator('qty')}</span>
-            </button>
-          </th>
-          <th>Avg Price</th>
-          <th>
-            <button type="button" className="sort-button" onClick={() => handleSort('amount')}>
-              Amount <span className="sort-indicator">{getSortIndicator('amount')}</span>
-            </button>
-          </th>
-          <th>Latest Close</th>
-          <th>
-            <button type="button" className="sort-button" onClick={() => handleSort('today')}>
-              Today&apos;s <span className="sort-indicator">{getSortIndicator('today')}</span>
-            </button>
-          </th>
-          <th>
-            <button type="button" className="sort-button" onClick={() => handleSort('current')}>
-              Current Value <span className="sort-indicator">{getSortIndicator('current')}</span>
-            </button>
-          </th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {sortedRows.map((r) => {
+    <div className="stock-table-shell">
+      <table className="stock-table">
+        <thead>
+          <tr>
+            <th>
+              <button type="button" className="sort-button" onClick={() => handleSort('symbol')}>
+                Symbol <span className="sort-indicator">{getSortIndicator('symbol')}</span>
+              </button>
+            </th>
+            <th>Status</th>
+            <th>
+              <button type="button" className="sort-button" onClick={() => handleSort('qty')}>
+                Qty <span className="sort-indicator">{getSortIndicator('qty')}</span>
+              </button>
+            </th>
+            <th>Avg Price</th>
+            <th>
+              <button type="button" className="sort-button" onClick={() => handleSort('amount')}>
+                Amount <span className="sort-indicator">{getSortIndicator('amount')}</span>
+              </button>
+            </th>
+            <th>Latest Close</th>
+            <th>
+              <button type="button" className="sort-button" onClick={() => handleSort('today')}>
+                Today&apos;s <span className="sort-indicator">{getSortIndicator('today')}</span>
+              </button>
+            </th>
+            <th>
+              <button type="button" className="sort-button" onClick={() => handleSort('current')}>
+                Current Value <span className="sort-indicator">{getSortIndicator('current')}</span>
+              </button>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedRows.map((r) => {
           const hasPrice = r.hasPrice
           const costBasis = r.costBasis
           const currentValue = r.currentValue
@@ -455,27 +456,28 @@ export default function StockTable({ rows, onUpdate, onDelete, onExit }) {
             </tr>
           )
         })}
-      </tbody>
-      <tfoot>
-        <tr className="table-footer">
-          <td><strong>Total</strong></td>
-          <td></td>
-          <td>{formatQty(totals.qty)}</td>
-          <td></td>
-          <td>{formatINR(totals.costBasis)}</td>
-          <td></td>
-          <td className={totals.todayPL >= 0 ? 'gain-text' : 'loss-text'}>
-            {`${totals.todayPL >= 0 ? '+' : ''}${formatINR(totals.todayPL)}`}
-          </td>
-          <td className={totals.overallPL >= 0 ? 'gain-text' : 'loss-text'}>
-            {formatINR(totals.currentValue)}
-            <span className="footer-subtext">
-              {`${totals.overallPL >= 0 ? '+' : ''}${formatINR(totals.overallPL)}`}
-            </span>
-          </td>
-          <td></td>
-        </tr>
-      </tfoot>
-    </table>
+        </tbody>
+        <tfoot>
+          <tr className="table-footer">
+            <td><strong>Total</strong></td>
+            <td></td>
+            <td>{formatQty(totals.qty)}</td>
+            <td></td>
+            <td>{formatINR(totals.costBasis)}</td>
+            <td></td>
+            <td className={totals.todayPL >= 0 ? 'gain-text' : 'loss-text'}>
+              {`${totals.todayPL >= 0 ? '+' : ''}${formatINR(totals.todayPL)}`}
+            </td>
+            <td className={totals.overallPL >= 0 ? 'gain-text' : 'loss-text'}>
+              {formatINR(totals.currentValue)}
+              <span className="footer-subtext">
+                {`${totals.overallPL >= 0 ? '+' : ''}${formatINR(totals.overallPL)}`}
+              </span>
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   )
 }
