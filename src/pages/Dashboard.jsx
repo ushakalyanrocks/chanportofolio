@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { supabase } from '../supabaseClient'
 import RangeToggle from '../components/RangeToggle'
 import PortfolioChart from '../components/PortfolioChart'
@@ -18,6 +18,10 @@ export default function Dashboard() {
   const [todayCloseByStock, setTodayCloseByStock] = useState({})
   const [yesterdayCloseByStock, setYesterdayCloseByStock] = useState({})
   const [range, setRange] = useState('1M')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const fromInputRef = useRef(null)
+  const toInputRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [addingStock, setAddingStock] = useState(false)
@@ -327,7 +331,19 @@ export default function Dashboard() {
   // overridden/appended with the live totals so it always matches the
   // header and the analytics card.
   const chartData = useMemo(() => {
-    const base = filterByRange(portfolioHistory, range)
+    let base = []
+    if (fromDate || toDate) {
+      base = (portfolioHistory || [])
+        .filter((d) => {
+          if (fromDate && d.date < fromDate) return false
+          if (toDate && d.date > toDate) return false
+          return true
+        })
+        .sort((a, b) => a.date.localeCompare(b.date))
+    } else {
+      base = filterByRange(portfolioHistory, range)
+    }
+
     const todayStr = new Date().toISOString().split('T')[0]
     const livePoint = {
       date: todayStr,
@@ -339,7 +355,7 @@ export default function Dashboard() {
       return [...base.slice(0, -1), livePoint]
     }
     return [...base, livePoint]
-  }, [portfolioHistory, range, liveMetrics])
+  }, [portfolioHistory, range, fromDate, toDate, liveMetrics])
 
   const latestTotal = chartData.length
     ? chartData[chartData.length - 1].total_value
@@ -438,9 +454,62 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <RangeToggle value={range} onChange={setRange} />
+      <div className="range-and-dates">
+        <RangeToggle value={range} onChange={setRange} />
+        <div className="date-range-controls">
+          <label className="date-control">
+            <span className="date-label">From</span>
+            <div className="date-input-row">
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                ref={fromInputRef}
+                aria-label="From date"
+              />
+              <button
+                type="button"
+                className="calendar-btn"
+                onClick={() => fromInputRef.current && fromInputRef.current.showPicker && fromInputRef.current.showPicker()}
+                title="Open calendar"
+              >
+                📅
+              </button>
+            </div>
+          </label>
+          <label className="date-control">
+            <span className="date-label">To</span>
+            <div className="date-input-row">
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                ref={toInputRef}
+                aria-label="To date"
+              />
+              <button
+                type="button"
+                className="calendar-btn"
+                onClick={() => toInputRef.current && toInputRef.current.showPicker && toInputRef.current.showPicker()}
+                title="Open calendar"
+              >
+                📅
+              </button>
+            </div>
+          </label>
+          <button
+            className="btn-clear-dates"
+            onClick={() => {
+              setFromDate('')
+              setToDate('')
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
       <PortfolioChart data={chartData} />
-      <PortfolioCharts data={chartData} />
+      <PortfolioCharts data={chartData} range={range} fromDate={fromDate} toDate={toDate} />
 
       <PortfolioAnalytics stocks={stocks} latestCloseByStock={latestCloseByStock} />
 

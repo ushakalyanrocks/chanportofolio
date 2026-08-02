@@ -57,7 +57,7 @@ function ChartCard({ title, subtitle, children, empty }) {
   )
 }
 
-export default function PortfolioCharts({ data }) {
+export default function PortfolioCharts({ data, range, fromDate, toDate }) {
   if (!data || data.length === 0) {
     return (
       <div className="portfolio-charts-grid">
@@ -221,7 +221,13 @@ export default function PortfolioCharts({ data }) {
 
       <ChartCard
         title="Combined View"
-        subtitle="Overlay invested value, current value, and profit/loss together"
+        subtitle={`Overlay invested value, current value, and profit/loss together${
+          fromDate || toDate
+            ? ` — ${fromDate || '...'} → ${toDate || '...'}`
+            : range
+            ? ` — ${range}`
+            : ''
+        }`}
       >
         <ResponsiveContainer width="100%" height={260}>
           <ComposedChart data={combinedSeries} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
@@ -292,13 +298,27 @@ export default function PortfolioCharts({ data }) {
               dot={{ r: 3, fill: '#d8a657', strokeWidth: 0 }}
               activeDot={{ r: 5 }}
             />
-            <Line
+            <defs>
+              <linearGradient id="combinedPnlFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#4fd1a5" stopOpacity={0.22} />
+                <stop offset="70%" stopColor="#4fd1a5" stopOpacity={0.08} />
+                <stop offset="100%" stopColor="#4fd1a5" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="combinedPnlFillNeg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f0685c" stopOpacity={0.22} />
+                <stop offset="70%" stopColor="#f0685c" stopOpacity={0.08} />
+                <stop offset="100%" stopColor="#f0685c" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+
+            <Area
               yAxisId="right"
               type="monotone"
               dataKey="pnl"
               stroke={combinedSeries.some((item) => item.pnl >= 0) ? '#4fd1a5' : '#f0685c'}
               strokeWidth={2}
-              dot={false}
+              fill={combinedSeries.some((item) => item.pnl >= 0) ? 'url(#combinedPnlFill)' : 'url(#combinedPnlFillNeg)'}
+              activeDot={{ r: 4 }}
             />
           </ComposedChart>
         </ResponsiveContainer>
